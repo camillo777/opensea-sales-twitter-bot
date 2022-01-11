@@ -81,11 +81,9 @@ async function getEvents() {
     console.log( 'getEvents' );
 
     try {
-        const lastSaleTime = cache.get('lastSaleTime', null); // || moment().startOf('minute').subtract(59, "seconds").unix();
+        const lastSaleTime = cache.get( 'lastSaleTime' ) || moment().startOf('minute').subtract(60, "minutes").unix();
 
-        console.assert( lastSaleTime );
-
-        console.log(`Last sale (in seconds since Unix epoch): ${cache.get( 'lastSaleTime', null )}`);
+        console.log(`Last sale (in seconds since Unix epoch): ${lastSaleTime}`);
 
         const response = await axios.get('https://api.opensea.io/api/v1/events', {
             headers: {
