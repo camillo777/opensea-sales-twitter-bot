@@ -5,7 +5,7 @@ const axios = require('axios');
 const _ = require('lodash');
 const moment = require('moment');
 const { ethers } = require('ethers');
-const tweet = require('./tweet');
+const tweet2 = require('./tweet2');
 const cache = require('./cache');
 
 main();
@@ -59,7 +59,7 @@ function formatTweet( event ) {
 
 function sendTweet( tweetText ) {
     
-    console.log(tweetText);
+    console.log( `sendTweet: ${tweetText}` );
 
     // OPTIONAL PREFERENCE - don't tweet out sales below X ETH (default is 1 ETH - change to what you prefer)
     // if (Number(formattedEthPrice) < 1) {
@@ -71,7 +71,7 @@ function sendTweet( tweetText ) {
     // const imageUrl = _.get(event, ['asset', 'image_url']);
     // return tweet.tweetWithImage(tweetText, imageUrl);
 
-    return tweet.tweet(tweetText);
+    tweet2.tweet( tweetText );
 }
 
 // Poll OpenSea every 60 seconds & retrieve all sales for a given collection in either the time since the last sale OR in the last minute
