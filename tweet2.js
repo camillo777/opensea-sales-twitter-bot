@@ -28,7 +28,7 @@ async function tweet( tweetText ) {
         status: tweetText,
     };*/
 
-    await client.v1.tweet( tweetText );
+    await client.v2.tweet( tweetText );
 
     /*twitterClient.post('statuses/update', tweet, (error, tweet, response) => {
         if (!error) {
