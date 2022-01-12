@@ -9,7 +9,7 @@ config.opensea.collection_slug = '';
 config.opensea.collection_address = '0xC8BcbE0E8ae36D8f9238cd320ef6dE88784B1734';
 
 config.sleep_time_msecs = 60000
-config.stats_elapsed_msecs = 1000*60*5; //1000*60*60*24;
+config.stats_elapsed_msecs = 1000*60*60*6; //1000*60*60*24;
 config.tags = ['NFT','NFTCollection','NFTCommunity'];
 
 //config.default_stuff =  ['red','green','blue','apple','yellow','orange','politics'];
