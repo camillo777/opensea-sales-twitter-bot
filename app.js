@@ -8,13 +8,25 @@ const { ethers } = require('ethers');
 const tweet2 = require('./tweet2');
 const cache = require('./cache');
 
+const nl = '\r\n';
+
+
 main();
 
 async function main() {
     try {
+        var startTime = Date.now();
+        console.log( `startTime: ${startTime}` )
+
         while( true ) {
             await getEvents();
-            await sleep( 60000 );
+            
+            await sleep( config.sleep_time_msecs );
+
+            if ( Date.now() - startTime > config.stats_elapsed_msecs ) {
+                await getStats();
+                startTime = Date.now();
+            }
         }
     }
     catch( e ) {
@@ -26,9 +38,63 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function getStats() {
+    console.log( 'getStats' );
+
+    const stats = await getOpenSeaStats( 'winterbears' );
+
+    if (stats) {
+        /*
+{
+    "one_day_volume": 8.170528,
+    "one_day_change": -0.37962947214966875,
+    "one_day_sales": 37,
+    "one_day_average_price": 0.22082508108108106,
+    "seven_day_volume": 432.96651892149106,
+    "seven_day_change": 3.630326157606298,
+    "seven_day_sales": 1621,
+    "seven_day_average_price": 0.26709840772454724,
+    "thirty_day_volume": 588.57962882049,
+    "thirty_day_change": 1.0718825057706534,
+    "thirty_day_sales": 2756,
+    "thirty_day_average_price": 0.21356300029771047,
+    "total_volume": 8779.201743490707,
+    "total_sales": 21564,
+    "total_supply": 10000,
+    "count": 10000,
+    "num_owners": 4804,
+    "average_price": 0.4071230636009417,
+    "num_reports": 7,
+    "market_cap": 2670.9840772454722,
+    "floor_price": 0.151
+  }
+        */
+
+        const floorPrice = _.get( stats, ['floor_price'] );
+        const numOwners = _.get( stats, ['num_owners'] );
+        const totalVolume = _.get( stats, ['total_volume'] );
+        const totalSales = _.get( stats, ['total_sales'] );
+        const oneDayVolumeChange = _.get( stats, ['one_day_change'] );
+        const oneDaySales = _.get( stats, ['one_day_sales'] );
+
+        var statsText = `Winter Bears collection stats:`+nl+nl
+        statsText += `Floor: ${floorPrice}${ethers.constants.EtherSymbol}`+nl;
+        statsText += `Total Owners: ${numOwners}`+nl;
+        statsText += `Total Volume: ${getNumberUnit( Math.floor(totalVolume) )}${ethers.constants.EtherSymbol}`+nl;
+        statsText += `Total Sales: ${totalSales}`+nl;
+        statsText += `24h Volume change: ${oneDayVolumeChange.toFixed(2)}%`+nl;
+        statsText += `24h Sales: ${oneDaySales}`+nl+nl;
+
+        statsText += 'https://opensea.io/collection/winterbears'+nl+nl;
+        statsText += config.tags.reduce((pv,cv)=>pv +=`#${cv} `, '')
+
+        await sendTweet( statsText );
+    }
+}
+
 // Format tweet text
-function formatTweet( event ) {
-    console.log( 'formatTweet' );
+function formatTweetEvent( event, stats = null ) {
+    console.log( 'formatTweetEvent' );
     //console.log( event );
 
     // Handle both individual items + bundle sales
@@ -50,32 +116,16 @@ function formatTweet( event ) {
     const formattedEthPrice = formattedUnits * tokenEthPrice;
     const formattedUsdPrice = formattedUnits * tokenUsdPrice;
 
-    const tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) #NFT ${openseaLink}`;
+    //var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) #NFT ${openseaLink}`;
+
+    var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) ${openseaLink}`+nl;
+
+    tweetText += config.tags.reduce((pv,cv)=>pv +=`#${cv} `, '')
 
     //console.log(tweetText);
 
     return tweetText;
 }
-
-function sendTweet( tweetText ) {
-    
-    console.log( `sendTweet: ${tweetText}` );
-
-    // OPTIONAL PREFERENCE - don't tweet out sales below X ETH (default is 1 ETH - change to what you prefer)
-    // if (Number(formattedEthPrice) < 1) {
-    //     console.log(`${assetName} sold below tweet price (${formattedEthPrice} ETH).`);
-    //     return;
-    // }
-
-    // OPTIONAL PREFERENCE - if you want the tweet to include an attached image instead of just text
-    // const imageUrl = _.get(event, ['asset', 'image_url']);
-    // return tweet.tweetWithImage(tweetText, imageUrl);
-
-    tweet2.tweet( tweetText );
-}
-
-// Poll OpenSea every 60 seconds & retrieve all sales for a given collection in either the time since the last sale OR in the last minute
-//setInterval(() => {
 
 async function getEvents() {
     console.log( 'getEvents' );
@@ -85,26 +135,11 @@ async function getEvents() {
 
         console.log(`Last sale (in seconds since Unix epoch): ${lastSaleTime}`);
 
-        const response = await axios.get('https://api.opensea.io/api/v1/events', {
-            headers: {
-                'X-API-KEY': process.env.OPENSEA_API_KEY
-            },
-            params: {
-                asset_contract_address: config.opensea.collection_address,
-                //collection_slug: process.env.OPENSEA_COLLECTION_SLUG,
-                event_type: 'successful',
-                occurred_after: lastSaleTime,
-                only_opensea: 'false',
-                offset: 0, // max: 10000
-                limit: '300' // max: 300
-            }
-        });
-    
-        const events = await _.get( response, ['data', 'asset_events'] );
+        const events = await getOpenSeaEvents( lastSaleTime );
 
         const sortedEvents = _.sortBy( events, function( event ) {
             const created = _.get( event, 'created_date' ); // created_date
-            console.log( created, moment( created ).unix() );
+            //console.log( created, moment( created ).unix() );
             return new Date( created );
         })
 
@@ -120,13 +155,14 @@ async function getEvents() {
    
             console.log( createdUnix, lastSaleTime )
 
+            var tweetText = formatTweetEvent( event );
+                
             if ( createdUnix > lastSaleTime ) {
-                var tweetText = formatTweet( event );
                 console.log( tweetText )
-                sendTweet( tweetText );
+                await sendTweet( tweetText );
             }
             else {
-                console.log( 'old event, discarded', formatTweet( event ) );
+                console.log( `old event, discarded --> ${tweetText}` );
             }
 
             cache.set( 'lastSaleTime', createdUnix );
@@ -141,4 +177,92 @@ async function getEvents() {
 
     console.log( 'getEvents END' )
 }
-//}, 60000);
+
+async function sendTweet( tweetText ) {
+    
+    console.log( `sendTweet: ${tweetText}` );
+
+    // OPTIONAL PREFERENCE - don't tweet out sales below X ETH (default is 1 ETH - change to what you prefer)
+    // if (Number(formattedEthPrice) < 1) {
+    //     console.log(`${assetName} sold below tweet price (${formattedEthPrice} ETH).`);
+    //     return;
+    // }
+
+    // OPTIONAL PREFERENCE - if you want the tweet to include an attached image instead of just text
+    // const imageUrl = _.get(event, ['asset', 'image_url']);
+    // return tweet.tweetWithImage(tweetText, imageUrl);
+
+    try {
+        await tweet2.tweet( tweetText );
+    }
+    catch( e ) {
+        console.error( e );
+    }
+}
+
+//// OPENSEA
+
+async function getOpenSeaEvents( lastSaleTime ) {
+    console.log( 'getOpenSeaEvents' );
+
+    var events = [];
+
+    try {
+        const response = await axios.get('https://api.opensea.io/api/v1/events', {
+                headers: {
+                    'X-API-KEY': process.env.OPENSEA_API_KEY
+                },
+                params: {
+                    asset_contract_address: config.opensea.collection_address,
+                    //collection_slug: process.env.OPENSEA_COLLECTION_SLUG,
+                    event_type: 'successful',
+                    occurred_after: lastSaleTime,
+                    only_opensea: 'false',
+                    offset: 0, // max: 10000
+                    limit: '300' // max: 300
+                }
+            });
+    
+        events = await _.get( response, ['data', 'asset_events'] );
+    }
+    catch( e ) {
+        console.error( e )
+    }
+
+    return events;
+}
+
+// winterbears
+async function getOpenSeaStats( slug ) {
+    console.log( 'getOpenSeaStats' );
+
+    const response = await axios.get( `https://api.opensea.io/api/v1/collection/${slug}/stats`, {
+            headers: {
+                'X-API-KEY': process.env.OPENSEA_API_KEY
+            },
+            params: {}
+        });
+    
+    const stats = await _.get( response, ['data', 'stats'] );
+    return stats;
+}
+
+
+//// UTILS 
+function getNumberUnit( num ) {
+    if (num < 1000) return num;
+    // Nine Zeroes for Billions
+    return Math.abs(Number(num)) >= 1.0e+9
+
+    ? (Math.abs(Number(num)) / 1.0e+9).toFixed(2) + "B"
+    // Six Zeroes for Millions 
+    : Math.abs(Number(num)) >= 1.0e+6
+
+    ? (Math.abs(Number(num)) / 1.0e+6).toFixed(2) + "M"
+    // Three Zeroes for Thousands
+    : Math.abs(Number(num)) >= 1.0e+3
+
+    ? (Math.abs(Number(num)) / 1.0e+3).toFixed(2) + "K"
+
+    : Math.abs(Number(num));
+}
