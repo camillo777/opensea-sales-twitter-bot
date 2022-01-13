@@ -195,6 +195,8 @@ async function getEvents( collection ) {
 
             await caches[ collection.ref ].set( 'lastSaleTime', createdUnix );
 
+            await sleep( 1000*5 );
+
         //});
 
         }
