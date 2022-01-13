@@ -1,16 +1,35 @@
 const fs = require('fs');
-const filePath = './db.json';
+const moment = require('moment');
 
-module.exports = {
-    cache: {},
-    get: function ( key ) {
-        if ( !fs.existsSync( filePath ) ) return null;
-        const jsonData = fs.readFileSync( filePath, {encoding: "utf8"} ); 
+class Cache {
+
+    constructor( cacheName ) {
+        this.cacheName = cacheName;
+        this.dir = './cache';
+        this.filePath = `${this.dir}/${this.cacheName}.json`;
+        this.cache = {};
+        
+        if ( !fs.existsSync( this.dir ) ){
+            fs.mkdirSync( this.dir );
+        }
+    }
+
+    async get( key ) {
+        console.log( 'Cache', 'get', this.cacheName );
+        if ( !fs.existsSync( this.filePath ) ) {
+            //return null;
+            await this.set( key, moment().startOf('minute').subtract(60, "minutes").unix() );
+        }
+        const jsonData = fs.readFileSync( this.filePath, { encoding: "utf8" } ); 
         this.cache = JSON.parse( jsonData );
         return this.cache[key]
-    },
-    set: function ( key, val ) {
+    }
+
+    async set( key, val ) {
+        console.log( 'Cache', 'set', this.cacheName, val );
         this.cache[key] = val;
-        fs.writeFileSync( filePath, JSON.stringify( this.cache ) );  
+        fs.writeFileSync( this.filePath, JSON.stringify( this.cache ) );  
     }
 }
+
+module.exports = { Cache }

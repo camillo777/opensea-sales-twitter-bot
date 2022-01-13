@@ -10,23 +10,49 @@ const cache = require('./cache');
 
 const nl = '\r\n';
 
+var startTimes = {};
+var caches = {};
 
 main();
 
 async function main() {
     try {
-        var startTime = Date.now();
-        console.log( `startTime: ${startTime}` )
+
+        for(let j=0; j<config.opensea.collections.length; j++) {
+
+            var collection = config.opensea.collections[j];
+
+            startTimes[ collection.ref ] = Date.now();
+            caches[ collection.ref ] = new cache.Cache( collection.ref );
+
+        }
+
+        //var startTime = Date.now();
+        //console.log( `startTime: ${startTime}` )
 
         while( true ) {
-            await getEvents();
+
+            for(var j=0; j<config.opensea.collections.length; j++) {
+
+                var collection = config.opensea.collections[j];
+
+                console.log( `>---- ${ collection.name } CHECK START`);
+                
+                await getEvents( collection );
+
+                await sleep( 1000*5 );
+
+                if ( Date.now() - startTimes[ collection.ref ] > collection.stats_msecs ) {
+                    await getStats( collection );
+                    startTimes[ collection.ref ] = Date.now();
+                }
+
+                console.log( `----< ${ collection.name } CHECK END`);
             
+            }
+
             await sleep( config.sleep_time_msecs );
 
-            if ( Date.now() - startTime > config.stats_elapsed_msecs ) {
-                await getStats();
-                startTime = Date.now();
-            }
         }
     }
     catch( e ) {
@@ -38,10 +64,10 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function getStats() {
+async function getStats( collection ) {
     console.log( 'getStats' );
 
-    const stats = await getOpenSeaStats( 'winterbears' );
+    const stats = await getOpenSeaStats( collection.slug );
 
     if (stats) {
         /*
@@ -77,7 +103,7 @@ async function getStats() {
         const oneDayVolumeChange = _.get( stats, ['one_day_change'] );
         const oneDaySales = _.get( stats, ['one_day_sales'] );
 
-        var statsText = `Winter Bears collection stats:`+nl+nl
+        var statsText = `${ collection.name } collection stats:`+nl+nl
         statsText += `Floor: ${floorPrice}${ethers.constants.EtherSymbol}`+nl;
         statsText += `Total Owners: ${numOwners}`+nl;
         statsText += `Total Volume: ${getNumberUnit( Math.floor(totalVolume) )}${ethers.constants.EtherSymbol}`+nl;
@@ -85,7 +111,7 @@ async function getStats() {
         statsText += `24h Volume change: ${oneDayVolumeChange.toFixed(2)}%`+nl;
         statsText += `24h Sales: ${oneDaySales}`+nl+nl;
 
-        statsText += 'https://opensea.io/collection/winterbears'+nl+nl;
+        statsText += `${ collection.opensea_url }` +nl+nl;
         statsText += config.tags.reduce((pv,cv)=>pv +=`#${cv} `, '')
 
         await sendTweet( statsText );
@@ -93,7 +119,7 @@ async function getStats() {
 }
 
 // Format tweet text
-function formatTweetEvent( event, stats = null ) {
+function formatTweetEvent( event ) {
     console.log( 'formatTweetEvent' );
     //console.log( event );
 
@@ -118,7 +144,7 @@ function formatTweetEvent( event, stats = null ) {
 
     //var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) #NFT ${openseaLink}`;
 
-    var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) ${openseaLink}`+nl;
+    var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) ${openseaLink}`+nl+nl;
 
     tweetText += config.tags.reduce((pv,cv)=>pv +=`#${cv} `, '')
 
@@ -127,15 +153,17 @@ function formatTweetEvent( event, stats = null ) {
     return tweetText;
 }
 
-async function getEvents() {
-    console.log( 'getEvents' );
+async function getEvents( collection ) {
+    console.log( 'getEvents', collection.name );
 
     try {
-        const lastSaleTime = cache.get( 'lastSaleTime' ) || moment().startOf('minute').subtract(60, "minutes").unix();
+        //const lastSaleTime = ( await caches[ collection.ref ].get( 'lastSaleTime' ) ) || 
+        //    moment().startOf('minute').subtract(60, "minutes").unix();
 
+        const lastSaleTime = await caches[ collection.ref ].get( 'lastSaleTime' );
         console.log(`Last sale (in seconds since Unix epoch): ${lastSaleTime}`);
 
-        const events = await getOpenSeaEvents( lastSaleTime );
+        const events = await getOpenSeaEvents( collection, lastSaleTime );
 
         const sortedEvents = _.sortBy( events, function( event ) {
             const created = _.get( event, 'created_date' ); // created_date
@@ -153,7 +181,7 @@ async function getEvents() {
             const created = _.get( event, 'created_date' ); // created_date
             const createdUnix = moment( created ).unix();
    
-            console.log( createdUnix, lastSaleTime )
+            console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}` );
 
             var tweetText = formatTweetEvent( event );
                 
@@ -165,7 +193,7 @@ async function getEvents() {
                 console.log( `old event, discarded --> ${tweetText}` );
             }
 
-            cache.set( 'lastSaleTime', createdUnix );
+            await caches[ collection.ref ].set( 'lastSaleTime', createdUnix );
 
         //});
 
@@ -202,8 +230,8 @@ async function sendTweet( tweetText ) {
 
 //// OPENSEA
 
-async function getOpenSeaEvents( lastSaleTime ) {
-    console.log( 'getOpenSeaEvents' );
+async function getOpenSeaEvents( collection, lastSaleTime ) {
+    console.log( 'getOpenSeaEvents', collection.name );
 
     var events = [];
 
@@ -213,7 +241,7 @@ async function getOpenSeaEvents( lastSaleTime ) {
                     'X-API-KEY': process.env.OPENSEA_API_KEY
                 },
                 params: {
-                    asset_contract_address: config.opensea.collection_address,
+                    asset_contract_address: collection.address, // config.opensea.collection_address,
                     //collection_slug: process.env.OPENSEA_COLLECTION_SLUG,
                     event_type: 'successful',
                     occurred_after: lastSaleTime,
