@@ -144,7 +144,8 @@ function formatTweetEvent( event ) {
 
     //var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) #NFT ${openseaLink}`;
 
-    var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) ${openseaLink}`+nl+nl;
+    var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)})`+nl;
+    tweetText += `${openseaLink}`+nl+nl;
 
     tweetText += config.tags.reduce((pv,cv)=>pv +=`#${cv} `, '')
 
