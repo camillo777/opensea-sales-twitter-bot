@@ -40,7 +40,7 @@ async function main() {
                 
                 await getEvents( collection );
 
-                await sleep( 1000*5 );
+                await sleep( 1000 * config.sleep_secs_btw_collections );
 
                 if ( Date.now() - startTimes[ collection.ref ] > collection.stats_msecs ) {
                     await getStats( collection );
@@ -195,7 +195,7 @@ async function getEvents( collection ) {
 
             await caches[ collection.ref ].set( 'lastSaleTime', createdUnix );
 
-            await sleep( 1000*5 );
+            await sleep( 1000 * config.sleep_secs_btw_posts );
 
         //});
 
