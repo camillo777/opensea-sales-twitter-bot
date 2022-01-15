@@ -43,6 +43,11 @@ config.sleep_time_msecs = 60000
 config.sleep_secs_btw_posts = 10
 config.sleep_secs_btw_collections = 10
 
+config.mail = {}
+config.mail.to = 'camillo777@gmail.com'
+config.mail.smtp = 'smtp.gmail.com'
+config.mail.port = 587
+
 //config.stats_elapsed_msecs = 1000*60*5; //1000*60*60*24;
 config.tags = ['NFT','NFTCollection','NFTCommunity'];
 

@@ -8,6 +8,18 @@ const { ethers } = require('ethers');
 const tweet2 = require('./tweet2');
 const cache = require('./cache');
 
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+    host: config.mail.smtp,
+    port: config.mail.port,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
+    },
+});
+transporter.verify().then( console.log ).catch( console.error );
+
 const nl = '\r\n';
 
 var startTimes = {};
@@ -188,6 +200,7 @@ async function getEvents( collection ) {
                 
             if ( createdUnix > lastSaleTime ) {
                 console.log( tweetText )
+                //await sendMail( 'New Tweet', tweetText );
                 await sendTweet( tweetText );
             }
             else {
@@ -227,6 +240,7 @@ async function sendTweet( tweetText ) {
         await tweet2.tweet( tweetText );
     }
     catch( e ) {
+        await sendMail( 'Tweet Error', `${ e }` );
         console.error( e );
     }
 }
@@ -296,4 +310,24 @@ function getNumberUnit( num ) {
     ? (Math.abs(Number(num)) / 1.0e+3).toFixed(2) + "K"
 
     : Math.abs(Number(num));
+}
+
+
+//// MAIL
+
+async function sendMail( subject, body ) {
+    console.log( 'sendMail' );
+    try {
+        var info = await transporter.sendMail({
+            //from: '"Your Name" <youremail@gmail.com>', // sender address
+            to: config.mail.to, //"receiverone@gmail.com, receivertwo@outlook.com", // list of receivers
+            subject: subject, // Subject line
+            text: body, // plain text body
+            //html: "<b>There is a new article. It's about sending emails, check it out!</b>", // html body
+        });
+    }
+    catch( e ) {
+        console.error( e );
+    }
+    console.log( info ); 
 }
