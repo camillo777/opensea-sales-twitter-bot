@@ -332,7 +332,7 @@ async function sendTweet( tweetText ) {
         }
     }
     catch( e ) {
-        await sendMail( 'WinterBears Sales - Tweet Error', `${ e }` );
+        await sendMail( 'WinterBears Sales - Tweet Error', `${ JSON.stringify( e ) }` );
         console.error( e );
     }
 }
