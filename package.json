@@ -6,12 +6,8 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "author": "Daniel Griffin (http://github.com/dsgriffin)",
+    "author": "Camillo Ferraris",
     "license": "ISC",
-    "bugs": {
-        "url": "https://github.com/dsgriffin/opensea-sales-twitter-bot/issues"
-    },
-    "homepage": "http://github.com/dsgriffin/opensea-sales-twitter-bot",
     "dependencies": {
         "axios": "^0.21.1",
         "dotenv": "^10.0.0",

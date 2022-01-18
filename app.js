@@ -130,11 +130,58 @@ async function getStats( collection ) {
     }
 }
 
+function formatTraits( asset ) {
+    console.log( 'formatTraits' );
+    const traits = _.get( asset, ['traits'])
+
+    var text = '';
+
+    if (traits.length > 0) {
+    
+        const tier = _.find( traits, ( o ) => o.trait_type == 'Tier' ).value;
+        const neck = _.find( traits, ( o ) => o.trait_type == 'Neck Accessory' ).value;
+        const face = _.find( traits, ( o ) => o.trait_type == 'Face Accessory' ).value;
+        const expression = _.find( traits, ( o ) => o.trait_type == 'Expression' ).value;
+        const hat = _.find( traits, ( o ) => o.trait_type == 'Hat' ).value;
+        const body = _.find( traits, ( o ) => o.trait_type == 'Body' ).value;
+
+        text += `Tier: ${ tier }` + nl;
+        text += `Neck: ${ neck }` + nl;
+        text += `Face: ${ face }` + nl;
+        text += `Expression: ${ expression }` + nl;
+        text += `Hat: ${ hat }` + nl;
+        text += `Body: ${ body }`;
+
+    }
+
+    return text;
+}
+
+function formatEventName( event ) {
+    console.log( 'formatEventName' );
+
+    const assetName = _.get(event, ['asset', 'name'], _.get(event, ['asset_bundle', 'name']));
+    
+    const totalPrice = _.get(event, 'total_price');
+
+    const tokenDecimals = _.get(event, ['payment_token', 'decimals']);
+    const tokenUsdPrice = _.get(event, ['payment_token', 'usd_price']);
+    const tokenEthPrice = _.get(event, ['payment_token', 'eth_price']);
+
+    const formattedUnits = ethers.utils.formatUnits(totalPrice, tokenDecimals);
+    const formattedEthPrice = formattedUnits * tokenEthPrice;
+    const formattedUsdPrice = formattedUnits * tokenUsdPrice;
+
+    var text = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)})`;
+    
+    return text;
+}
+
 // Format tweet text
-function formatTweetEvent( event ) {
+function formatTweetEvent( event, asset ) {
     console.log( 'formatTweetEvent' );
     //console.log( event );
-
+/*
     // Handle both individual items + bundle sales
     const assetName = _.get(event, ['asset', 'name'], _.get(event, ['asset_bundle', 'name']));
     const openseaLink = _.get(event, ['asset', 'permalink'], _.get(event, ['asset_bundle', 'permalink']));
@@ -157,6 +204,15 @@ function formatTweetEvent( event ) {
     //var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) #NFT ${openseaLink}`;
 
     var tweetText = `${assetName} bought for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)})`+nl;
+*/
+    var tweetText = formatEventName( event ) + nl + nl;
+
+    if ( asset ) {
+        var traits = formatTraits( asset );
+        if ( traits != '' ) tweetText += traits + nl + nl;
+    }
+
+    const openseaLink = _.get(event, ['asset', 'permalink'], _.get(event, ['asset_bundle', 'permalink']));
     tweetText += `${openseaLink}`+nl+nl;
 
     tweetText += config.tags.reduce((pv,cv)=>pv +=`#${cv} `, '')
@@ -193,18 +249,20 @@ async function getEvents( collection ) {
 
             const created = _.get( event, 'created_date' ); // created_date
             const createdUnix = moment( created ).unix();
-   
-            console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}` );
 
-            var tweetText = formatTweetEvent( event );
+            const tokenID = _.get( event, ['asset', 'token_id'] );
+   
+            console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}, tokenID: ${ tokenID }` );
                 
             if ( createdUnix > lastSaleTime ) {
+                const asset = await getOpenSeaAsset( collection.address, tokenID );
+                var tweetText = formatTweetEvent( event, asset );
                 console.log( tweetText )
                 //await sendMail( 'New Tweet', tweetText );
                 await sendTweet( tweetText );
             }
             else {
-                console.log( `old event, discarded --> ${tweetText}` );
+                console.log( `old event, discarded --> ${ formatEventName( event ) }` );
             }
 
             await caches[ collection.ref ].set( 'lastSaleTime', createdUnix );
@@ -237,10 +295,10 @@ async function sendTweet( tweetText ) {
     // return tweet.tweetWithImage(tweetText, imageUrl);
 
     try {
-        await tweet2.tweet( tweetText );
+        //await tweet2.tweet( tweetText );
     }
     catch( e ) {
-        await sendMail( 'Tweet Error', `${ e }` );
+        await sendMail( 'WinterBears Sales - Tweet Error', `${ e }` );
         console.error( e );
     }
 }
@@ -290,6 +348,26 @@ async function getOpenSeaStats( slug ) {
     
     const stats = await _.get( response, ['data', 'stats'] );
     return stats;
+}
+
+async function getOpenSeaAsset( address, tokenID ) {
+    console.log( 'getOpenSeaAsset', address, tokenID );
+
+    const response = await axios.get( `https://api.opensea.io/api/v1/assets`, {
+            headers: {
+                'X-API-KEY': process.env.OPENSEA_API_KEY
+            },
+            params: {
+                asset_contract_address: address,
+                token_ids: tokenID,
+                offset: 0,
+                limit: 1
+            }
+        });
+    
+    const assets = await _.get( response, ['data', 'assets'] );
+    console.log ( assets[0] );
+    return assets[0];
 }
 
 
