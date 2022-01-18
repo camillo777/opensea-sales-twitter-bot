@@ -256,7 +256,7 @@ async function getEvents( collection ) {
             const checkAsset = _.get( event, 'asset' );
             console.log( 'checkAsset', checkAsset ) 
             if ( !checkAsset ) {
-                console.error( '--------> !!! Problematic event, skip' )
+                console.error( '--------> !!! Problematic event, skip', event )
                 continue;
             }
 
@@ -437,3 +437,116 @@ async function sendMail( subject, body ) {
     }
     console.log( info ); 
 }
+
+/*
+
+--------> !!! Problematic event, skip {
+  approved_account: null,
+  asset: null,
+  asset_bundle: {
+    maker: {
+      user: [Object],
+      profile_img_url: 'https://storage.googleapis.com/opensea-static/opensea-profile/4.png',
+      address: '0x92374325e2c251710a621a8423dacc907ad29234',
+      config: ''
+    },
+    slug: 'bear-pair-tbv',
+    assets: [ [Object], [Object] ],
+    name: 'Bear Pair',
+    description: 'Grab two, save gas',
+    external_link: null,
+    asset_contract: {
+      collection: [Object],
+      address: '0xe5ba25f22a20a22fb47dadf137f33fe2e9ab22ac',
+      asset_contract_type: 'non-fungible',
+      created_date: '2021-12-26T09:30:27.200771',
+      name: 'SummerBears',
+      nft_version: '3.0',
+      opensea_version: null,
+      owner: 80834775,
+      schema_name: 'ERC721',
+      symbol: 'SB',
+      total_supply: '10000',
+      description: 'Summer Bears are a collection of 10,000 NFTs that were airdropped to the Winter Bears community. Join the community today: https://discord.gg/F68xh5ZtzG  \n' +
+        'Winter Bears collection: https://opensea.io/collection/winterbears  \n' +
+        '3D Bears collection: https://opensea.io/collection/3dbears',
+      external_link: 'http://winterbearsnft.com',
+      image_url: 'https://lh3.googleusercontent.com/Esy5bNtF2hYrW8VRpW8BJDffx2CIerCic3CiMk-_jTiZflBrq6-_ayurWteJRkJ9Xi0wjuR1QhhK90usJucEfXjANpwbI-EADe1jHf0=s120',
+      default_to_fiat: false,
+      dev_buyer_fee_basis_points: 0,
+      dev_seller_fee_basis_points: 400,
+      only_proxied_transfers: false,
+      opensea_buyer_fee_basis_points: 0,
+      opensea_seller_fee_basis_points: 250,
+      buyer_fee_basis_points: 0,
+      seller_fee_basis_points: 650,
+      payout_address: '0x3dab914dedd7d0e58ab0dfc2e4f9bd7867b2dfa3'
+    },
+    permalink: 'https://opensea.io/bundles/bear-pair-tbv',
+    sell_orders: null
+  },
+  auction_type: null,
+  bid_amount: null,
+  collection_slug: 'summerbears',
+  contract_address: '0x7be8076f4ea4a4ad08075c2508e481d6c946d12b',
+  created_date: '2022-01-18T11:26:20.844040',
+  custom_event_name: null,
+  dev_fee_payment_event: null,
+  dev_seller_fee_basis_points: 400,
+  duration: null,
+  ending_price: null,
+  event_type: 'successful',
+  from_account: null,
+  id: 2951609146,
+  is_private: false,
+  owner_account: null,
+  payment_token: {
+    id: 1,
+    symbol: 'ETH',
+    address: '0x0000000000000000000000000000000000000000',
+    image_url: 'https://storage.opensea.io/files/6f8e2979d428180222796ff4a33ab929.svg',
+    name: 'Ether',
+    decimals: 18,
+    eth_price: '1.000000000000000',
+    usd_price: '3174.300000000000182000'
+  },
+  quantity: '2',
+  seller: {
+    user: { username: 'Arctic_Fox' },
+    profile_img_url: 'https://storage.googleapis.com/opensea-static/opensea-profile/4.png',
+    address: '0x92374325e2c251710a621a8423dacc907ad29234',
+    config: ''
+  },
+  starting_price: null,
+  to_account: null,
+  total_price: '79000000000000000',
+  transaction: {
+    block_hash: '0xdf8db9c31096c2017c774dace28f401568e672ac4f92f3e36a3b773819b6fc80',
+    block_number: '14029206',
+    from_account: {
+      user: [Object],
+      profile_img_url: 'https://storage.googleapis.com/opensea-static/opensea-profile/15.png',
+      address: '0x36ba357c27c999fc0a686a6b5b553f134c770a9d',
+      config: ''
+    },
+    id: 251408854,
+    timestamp: '2022-01-18T11:25:54',
+    to_account: {
+      user: [Object],
+      profile_img_url: 'https://storage.googleapis.com/opensea-static/opensea-profile/22.png',
+      address: '0x7be8076f4ea4a4ad08075c2508e481d6c946d12b',
+      config: 'verified'
+    },
+    transaction_hash: '0x56e38e87d9d4f720e8ee2057721f17511b4c47290dd9083349462416de36d1ab',
+    transaction_index: '163'
+  },
+  winner_account: {
+    user: { username: null },
+    profile_img_url: 'https://storage.googleapis.com/opensea-static/opensea-profile/15.png',
+    address: '0x36ba357c27c999fc0a686a6b5b553f134c770a9d',
+    config: ''
+  },
+  listing_time: '2022-01-18T01:33:14'
+}
+
+*/
