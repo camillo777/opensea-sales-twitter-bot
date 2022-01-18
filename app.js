@@ -253,6 +253,12 @@ async function getEvents( collection ) {
 
             var event = sortedEvents[i];
 
+            const asset = _.get( event, 'asset' );
+            if ( !!asset ) {
+                console.error( '--------> !!! Problematic event, skip' )
+                continue;
+            }
+
             const created = _.get( event, 'created_date' ); // created_date
             const createdUnix = moment( created ).unix();
 
