@@ -253,8 +253,9 @@ async function getEvents( collection ) {
 
             var event = sortedEvents[i];
 
-            const asset = _.get( event, 'asset' );
-            if ( !!asset ) {
+            const checkAsset = _.get( event, 'asset' );
+            console.log( 'checkAsset', checkAsset ) 
+            if ( !checkAsset ) {
                 console.error( '--------> !!! Problematic event, skip' )
                 continue;
             }
@@ -262,7 +263,7 @@ async function getEvents( collection ) {
             const created = _.get( event, 'created_date' ); // created_date
             const createdUnix = moment( created ).unix();
 
-            console.log( event );
+            console.log( 'event', event );
             const tokenID = _.get( event, ['asset', 'token_id'] );
    
             console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}, tokenID: ${ tokenID }` );
@@ -279,7 +280,7 @@ async function getEvents( collection ) {
 
                 var tweetText = formatTweetEvent( event, asset );
 
-                console.log( tweetText )
+                console.log( 'tweetText', tweetText )
                 //await sendMail( 'New Tweet', tweetText );
                 await sendTweet( tweetText );
             }
