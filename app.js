@@ -153,6 +153,9 @@ function formatTraits( asset ) {
         text += `Body: ${ body }`;
 
     }
+    else {
+        console.log( `-------> No traits found for asset` )
+    }
 
     return text;
 }
@@ -211,6 +214,9 @@ function formatTweetEvent( event, asset ) {
         var traits = formatTraits( asset );
         if ( traits != '' ) tweetText += traits + nl + nl;
     }
+    else {
+        console.log( '-------> Asset not defined' )
+    }
 
     const openseaLink = _.get(event, ['asset', 'permalink'], _.get(event, ['asset_bundle', 'permalink']));
     tweetText += `${openseaLink}`+nl+nl;
@@ -250,13 +256,23 @@ async function getEvents( collection ) {
             const created = _.get( event, 'created_date' ); // created_date
             const createdUnix = moment( created ).unix();
 
+            console.log( event );
             const tokenID = _.get( event, ['asset', 'token_id'] );
    
             console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}, tokenID: ${ tokenID }` );
                 
             if ( createdUnix > lastSaleTime ) {
-                const asset = await getOpenSeaAsset( collection.address, tokenID );
+                var asset;
+                
+                if ( tokenID ) {
+                    asset = await getOpenSeaAsset( collection.address, tokenID );
+                }
+                else {
+                    console.error( `Token ID not found for event: ${ event }` ); 
+                }
+
                 var tweetText = formatTweetEvent( event, asset );
+
                 console.log( tweetText )
                 //await sendMail( 'New Tweet', tweetText );
                 await sendTweet( tweetText );
@@ -295,7 +311,12 @@ async function sendTweet( tweetText ) {
     // return tweet.tweetWithImage(tweetText, imageUrl);
 
     try {
-        //await tweet2.tweet( tweetText );
+        if ( config.twitter.send ) {
+            await tweet2.tweet( tweetText );
+        }
+        else {
+            console.log( '--------> !!! Send to Twitter is OFF' );
+        }
     }
     catch( e ) {
         await sendMail( 'WinterBears Sales - Tweet Error', `${ e }` );

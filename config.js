@@ -1,6 +1,8 @@
 var config = {};
 
 config.twitter = {};
+config.twitter.send = true;
+
 //config.redis = {};
 //config.web = {};
 config.opensea = {};
