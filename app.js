@@ -253,39 +253,45 @@ async function getEvents( collection ) {
 
             var event = sortedEvents[i];
 
+            const created = _.get( event, 'created_date' );
+            const createdUnix = moment( created ).unix();
+            const assetName = _.get(event, ['asset', 'name'], _.get(event, ['asset_bundle', 'name']));
+
+            console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}, name: ${ assetName }` );
+
             const checkAsset = _.get( event, 'asset' );
             console.log( 'checkAsset', checkAsset ) 
             if ( !checkAsset ) {
+                // bundle
                 console.error( '--------> !!! Problematic event, skip', event )
-                continue;
-            }
-
-            const created = _.get( event, 'created_date' ); // created_date
-            const createdUnix = moment( created ).unix();
-
-            console.log( 'event', event );
-            const tokenID = _.get( event, ['asset', 'token_id'] );
-   
-            console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}, tokenID: ${ tokenID }` );
-                
-            if ( createdUnix > lastSaleTime ) {
-                var asset;
-                
-                if ( tokenID ) {
-                    asset = await getOpenSeaAsset( collection.address, tokenID );
-                }
-                else {
-                    console.error( `Token ID not found for event: ${ event }` ); 
-                }
-
-                var tweetText = formatTweetEvent( event, asset );
-
-                console.log( 'tweetText', tweetText )
-                //await sendMail( 'New Tweet', tweetText );
-                await sendTweet( tweetText );
+                //continue;
             }
             else {
-                console.log( `old event, discarded --> ${ formatEventName( event ) }` );
+                //console.log( 'event', event );
+                
+                if ( createdUnix > lastSaleTime ) {
+                    const tokenID = _.get( event, ['asset', 'token_id'] );
+                    console.log( `tokenID: ${ tokenID }` );
+        
+                    var asset;
+                    
+                    if ( tokenID ) {
+                        asset = await getOpenSeaAsset( collection.address, tokenID );
+                    }
+                    else {
+                        console.error( `Token ID not found for event: ${ event }` ); 
+                    }
+
+                    var tweetText = formatTweetEvent( event, asset );
+
+                    console.log( 'tweetText', tweetText )
+                    //await sendMail( 'New Tweet', tweetText );
+                    await sendTweet( tweetText );
+                }
+                else {
+                    console.log( `old event, discarded --> ${ formatEventName( event ) }` );
+                }
+
             }
 
             await caches[ collection.ref ].set( 'lastSaleTime', createdUnix );
