@@ -1,5 +1,5 @@
 require('dotenv').config()
-const config = require('./config.js.default');
+const config = require('./config/config.js');
 
 const axios = require('axios');
 const _ = require('lodash');
