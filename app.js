@@ -253,48 +253,7 @@ async function getEvents( collection ) {
 
             var event = sortedEvents[i];
 
-            const created = _.get( event, 'created_date' );
-            const createdUnix = moment( created ).unix();
-            const assetName = _.get(event, ['asset', 'name'], _.get(event, ['asset_bundle', 'name']));
-
-            console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}, name: ${ assetName }` );
-
-            const checkAsset = _.get( event, 'asset' );
-            console.log( 'checkAsset', checkAsset ) 
-            if ( !checkAsset ) {
-                // bundle
-                console.error( '--------> !!! Problematic event, skip', event )
-                //continue;
-            }
-            else {
-                //console.log( 'event', event );
-                
-                if ( createdUnix > lastSaleTime ) {
-                    const tokenID = _.get( event, ['asset', 'token_id'] );
-                    console.log( `tokenID: ${ tokenID }` );
-        
-                    var asset;
-                    
-                    if ( tokenID ) {
-                        asset = await getOpenSeaAsset( collection.address, tokenID );
-                    }
-                    else {
-                        console.error( `Token ID not found for event: ${ event }` ); 
-                    }
-
-                    var tweetText = formatTweetEvent( event, asset );
-
-                    console.log( 'tweetText', tweetText )
-                    //await sendMail( 'New Tweet', tweetText );
-                    await sendTweet( tweetText );
-                }
-                else {
-                    console.log( `old event, discarded --> ${ formatEventName( event ) }` );
-                }
-
-            }
-
-            await caches[ collection.ref ].set( 'lastSaleTime', createdUnix );
+            await processEvent( collection, event, lastSaleTime );
 
             await sleep( 1000 * config.sleep_secs_btw_posts );
 
@@ -309,7 +268,57 @@ async function getEvents( collection ) {
     console.log( 'getEvents END' )
 }
 
-async function sendTweet( tweetText ) {
+async function processEvent( collection, event, lastSaleTime ) {
+
+    const created = _.get( event, 'created_date' );
+    const createdUnix = moment( created ).unix();
+    const assetName = _.get(event, ['asset', 'name'], _.get(event, ['asset_bundle', 'name']));
+
+    console.log( `Event created: ${createdUnix}, last sale time: ${lastSaleTime}, name: ${ assetName }` );
+
+    const checkAsset = _.get( event, 'asset' );
+    console.log( 'checkAsset', checkAsset ) 
+    if ( !checkAsset ) {
+        // bundle
+        console.error( '--------> !!! Problematic event, skip', event )
+        //continue;
+    }
+    else {
+        //console.log( 'event', event );
+        
+        if ( createdUnix > lastSaleTime ) {
+            const tokenID = _.get( event, ['asset', 'token_id'] );
+            const imageUrl = _.get( event, ['asset', 'image_url'] );
+        
+            console.log( `tokenID: ${ tokenID }` );
+
+            var asset;
+            
+            if ( tokenID ) {
+                asset = await getOpenSeaAsset( collection.address, tokenID );
+            }
+            else {
+                console.error( `Token ID not found for event: ${ event }` ); 
+            }
+
+            var tweetText = formatTweetEvent( event, asset );
+
+            console.log( 'tweetText', tweetText )
+            //await sendMail( 'New Tweet', tweetText );
+            
+            await sendTweet( tweetText, imageUrl );
+        }
+        else {
+            console.log( `old event, discarded --> ${ formatEventName( event ) }` );
+        }
+
+    }
+
+    await caches[ collection.ref ].set( 'lastSaleTime', createdUnix );
+
+}
+
+async function sendTweet( tweetText, imageUrl = null ) {
     
     console.log( `sendTweet: ${tweetText}` );
 
@@ -319,13 +328,15 @@ async function sendTweet( tweetText ) {
     //     return;
     // }
 
-    // OPTIONAL PREFERENCE - if you want the tweet to include an attached image instead of just text
-    // const imageUrl = _.get(event, ['asset', 'image_url']);
-    // return tweet.tweetWithImage(tweetText, imageUrl);
-
     try {
         if ( config.twitter.send ) {
-            await tweet2.tweet( tweetText );
+
+            if ( !imageUrl ) {
+                await tweet2.tweet( tweetText );
+            }
+            else {
+                await tweet2.tweetWithImage( tweetText, imageUrl );
+            }
         }
         else {
             console.log( '--------> !!! Send to Twitter is OFF' );
