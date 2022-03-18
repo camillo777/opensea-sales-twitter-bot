@@ -238,7 +238,7 @@ async function getEvents( collection ) {
         const lastSaleTime = await caches[ collection.ref ].get( 'lastSaleTime' );
         console.log(`Last sale (in seconds since Unix epoch): ${lastSaleTime}`);
 
-        const events = await getOpenSeaEvents( collection, lastSaleTime );
+        const events = await getOpenSeaEventsV2( collection, lastSaleTime );
 
         const sortedEvents = _.sortBy( events, function( event ) {
             const created = _.get( event, 'created_date' ); // created_date
