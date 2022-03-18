@@ -380,6 +380,36 @@ async function getOpenSeaEvents( collection, lastSaleTime ) {
     return events;
 }
 
+async function getOpenSeaEventsV2( collection, lastSaleTime ) {
+    console.log( 'getOpenSeaEventsV2', collection.name );
+
+    var events = [];
+
+    try {
+        const response = await axios.get('https://api.opensea.io/api/v1/events', {
+                headers: {
+                    'X-API-KEY': process.env.OPENSEA_API_KEY
+                },
+                params: {
+                    asset_contract_address: collection.address, // config.opensea.collection_address,
+                    //collection_slug: process.env.OPENSEA_COLLECTION_SLUG,
+                    event_type: 'successful',
+                    occurred_after: lastSaleTime,
+                    only_opensea: 'false',
+                    //offset: 0, // max: 10000
+                    //limit: '300' // max: 300
+                }
+            });
+    
+        events = await _.get( response, ['data', 'asset_events'] );
+    }
+    catch( e ) {
+        console.error( e )
+    }
+
+    return events;
+}
+
 // winterbears
 async function getOpenSeaStats( slug ) {
     console.log( 'getOpenSeaStats' );
